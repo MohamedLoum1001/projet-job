@@ -55,10 +55,36 @@ app.post('/jobs', (req, res) => {
     };
 
     jobs.push(newJob);
+
+    console.log(`\n🆕 NOUVEAU JOB CRÉÉ`);
+    console.log(`📌 Titre : ${title}`);
+    console.log(`🆔 ID    : ${newJob.id}\n`);
+
     res.status(201).json(newJob);
 });
 
-// POST: Upload fichier
+// PUT: Modifier le titre d'un job
+app.put('/jobs/:id', (req, res) => {
+    const { id } = req.params;
+    const { title } = req.body;
+
+    const job = jobs.find(j => j.id === id);
+
+    if (!job) return res.status(404).json({ error: "Job non trouvé." });
+    if (!title) return res.status(400).json({ error: "Le nouveau titre est requis." });
+
+    const oldTitle = job.title;
+    job.title = title;
+
+    console.log(`\n📝 MODIFICATION DE TITRE`);
+    console.log(`🆔 ID           : ${id}`);
+    console.log(`🔄 Ancien titre : ${oldTitle}`);
+    console.log(`✨ Nouveau titre: ${title}\n`);
+
+    res.json(job);
+});
+
+// POST: Upload ou REMPLACEMENT de fichier
 app.post('/jobs/:id/upload', upload.single('file'), (req, res) => {
     const { id } = req.params;
     const job = jobs.find(j => j.id === id);
@@ -66,8 +92,27 @@ app.post('/jobs/:id/upload', upload.single('file'), (req, res) => {
     if (!job) return res.status(404).json({ error: "Job non trouvé" });
     if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
 
+    // --- LOGIQUE DE SUPPRESSION SI REMPLACEMENT ---
+    if (job.fileUrl) {
+        const oldFilePath = path.join(__dirname, job.fileUrl);
+        if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+            console.log(`\n♻️  ANCIEN FICHIER REMPLACÉ : ${job.fileUrl}`);
+        }
+    }
+
     job.fileUrl = `uploads/${req.file.filename}`;
     job.status = 'Complété';
+
+    // --- LOGS DÉTAILLÉS ---
+    console.log(`\n📂 RÉCEPTION DE DOCUMENT`);
+    console.log(`-------------------------------------------`);
+    console.log(`📄 Nom original : ${req.file.originalname}`);
+    console.log(`💾 Nom stocké   : ${req.file.filename}`);
+    console.log(`📏 Taille       : ${(req.file.size / 1024).toFixed(2)} KB`);
+    console.log(`🏷️  Type MIME    : ${req.file.mimetype}`);
+    console.log(`🎯 Pour le Job  : ${job.title}`);
+    console.log(`-------------------------------------------\n`);
 
     res.json({ message: "Succès", job });
 });
@@ -77,16 +122,23 @@ app.delete('/jobs/:id', (req, res) => {
     const { id } = req.params;
     const job = jobs.find(j => j.id === id);
 
-    // Supprimer le fichier physique si il existe
     if (job && job.fileUrl) {
         const filePath = path.join(__dirname, job.fileUrl);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`\n🗑️  FICHIER PHYSIQUE SUPPRIMÉ : ${job.fileUrl}`);
+        }
     }
 
     jobs = jobs.filter(j => j.id !== id);
+    console.log(`❌ JOB SUPPRIMÉ DU FLUX : ${id}\n`);
     res.json({ message: "Job supprimé" });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 SERVEUR PRÊT : http://localhost:${PORT}`);
+    console.log(`
+🚀 SERVEUR PRÊT : http://localhost:${PORT}
+-------------------------------------------
+Surveille ce terminal pour voir les logs...
+    `);
 });
