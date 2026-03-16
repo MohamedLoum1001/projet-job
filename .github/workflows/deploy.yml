@@ -1,0 +1,40 @@
+name: Deploy React App to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Le déploiement se déclenche à chaque push sur main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📂 Checkout du code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+          cache-dependency-path: src-front/package-lock.json
+
+      - name: 📦 Installation des dépendances
+        run: |
+          cd src-front
+          npm install
+
+      - name: 🏗️ Build du projet
+        run: |
+          cd src-front
+          npm run build
+        env:
+          # Si vous avez une URL d'API de production, mettez-la ici
+          REACT_APP_API_URL: https://votre-api-production.com
+
+      - name: 🚀 Déploiement sur GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: src-front/build # Dossier généré par le build
+          branch: gh-pages # Branche cible pour l'hébergement
