@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_BASE = "https://job-manager-api-dkb7cvcvavfqc5cp.francecentral-01.azurewebsites.net";
+const API_URL = "https://job-api-container.azurewebsites.net";
 
 interface Job {
   id: string;
