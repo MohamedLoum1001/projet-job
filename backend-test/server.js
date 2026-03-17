@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 5000;
+// Azure utilise souvent la variable d'environnement PORT
+const PORT = process.env.PORT || 5000;
 
 // --- CONFIGURATION ---
 const uploadDir = path.join(__dirname, 'uploads');
@@ -26,8 +27,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// --- MIDDLEWARES ---
-app.use(cors());
+// --- MIDDLEWARES (CORRIGÉ POUR AZURE/GITHUB) ---
+const corsOptions = {
+    origin: ['https://mohamedloum1001.github.io', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -92,7 +101,6 @@ app.post('/jobs/:id/upload', upload.single('file'), (req, res) => {
     if (!job) return res.status(404).json({ error: "Job non trouvé" });
     if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu" });
 
-    // --- LOGIQUE DE SUPPRESSION SI REMPLACEMENT ---
     if (job.fileUrl) {
         const oldFilePath = path.join(__dirname, job.fileUrl);
         if (fs.existsSync(oldFilePath)) {
@@ -104,13 +112,11 @@ app.post('/jobs/:id/upload', upload.single('file'), (req, res) => {
     job.fileUrl = `uploads/${req.file.filename}`;
     job.status = 'Complété';
 
-    // --- LOGS DÉTAILLÉS ---
     console.log(`\n📂 RÉCEPTION DE DOCUMENT`);
     console.log(`-------------------------------------------`);
     console.log(`📄 Nom original : ${req.file.originalname}`);
     console.log(`💾 Nom stocké   : ${req.file.filename}`);
     console.log(`📏 Taille       : ${(req.file.size / 1024).toFixed(2)} KB`);
-    console.log(`🏷️  Type MIME    : ${req.file.mimetype}`);
     console.log(`🎯 Pour le Job  : ${job.title}`);
     console.log(`-------------------------------------------\n`);
 
@@ -136,9 +142,5 @@ app.delete('/jobs/:id', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`
-🚀 SERVEUR PRÊT : http://localhost:${PORT}
--------------------------------------------
-Surveille ce terminal pour voir les logs...
-    `);
+    console.log(`🚀 SERVEUR PRÊT SUR LE PORT ${PORT}`);
 });
